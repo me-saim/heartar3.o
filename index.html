@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebAR with Three.js</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fad0c4);
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      touch-action: none; /* Prevents default touch actions like scrolling */
     }
     canvas {
       display: block;
@@ -26,7 +28,7 @@
     document.body.appendChild(renderer.domElement);
 
     // Add colorful lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // General ambient light
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // General ambient light
     scene.add(ambientLight);
 
     const redLight = new THREE.PointLight(0xff0000, 1);
@@ -46,28 +48,61 @@
     const loader = new THREE.GLTFLoader();
     loader.load('heartar.glb', function (gltf) {
       model = gltf.scene;
-      model.scale.set(0.5, 0.5, 0.5); // Scale down the model to 50% of its original size
-      model.position.set(0, -0.5, 0); // Slightly lower the model for better framing
+      model.scale.set(0.5, 0.5, 0.5);
+      model.position.set(0, -0.5, 0);
       scene.add(model);
     });
 
     // Set initial camera position
     camera.position.set(0, 0, 3);
 
-    // Handle mouse movement to rotate the model
-    let mouseY = 0;
+    // Variables for mouse and touch rotation
+    let isDragging = false;
+    let previousX = 0;
+    let previousY = 0;
 
-    document.addEventListener('mousemove', (event) => {
-      mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    });
+    function onPointerDown(event) {
+      isDragging = true;
+      previousX = event.clientX || event.touches[0].clientX;
+      previousY = event.clientY || event.touches[0].clientY;
+    }
+
+    function onPointerMove(event) {
+      if (!isDragging) return;
+
+      const currentX = event.clientX || event.touches[0].clientX;
+      const currentY = event.clientY || event.touches[0].clientY;
+
+      const deltaX = (currentX - previousX) * 0.01;
+      const deltaY = (currentY - previousY) * 0.01;
+
+      if (model) {
+        model.rotation.x += deltaY;
+        model.rotation.y += deltaX;
+      }
+
+      previousX = currentX;
+      previousY = currentY;
+    }
+
+    function onPointerUp() {
+      isDragging = false;
+    }
+
+    // Add event listeners for both mouse and touch
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('mousemove', onPointerMove);
+    document.addEventListener('mouseup', onPointerUp);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('touchmove', onPointerMove);
+    document.addEventListener('touchend', onPointerUp);
 
     // Render loop
     function animate() {
       requestAnimationFrame(animate);
 
-      // Rotate the model only on the X-axis based on mouse movement
       if (model) {
-        model.rotation.x = mouseY * 0.5;
+        model.rotation.x += 0.005; // Continuous rotation on the X-axis
       }
 
       renderer.render(scene, camera);
